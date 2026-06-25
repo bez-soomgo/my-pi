@@ -302,6 +302,8 @@ function formatRunDetailOutput(run: CommandRunState): string {
 	if (run.runtime) lines.push(`Runtime: ${run.runtime}`);
 	if (run.runtime === "claude" && run.claudeSessionId) lines.push(`Claude Session: ${run.claudeSessionId}`);
 	if (run.sessionFile) lines.push(`Session: ${run.sessionFile}`);
+	const modelResolution = formatModelResolutionLine(run);
+	if (modelResolution) lines.push(modelResolution);
 	if (run.thoughtText) lines.push(`Thought: ${run.thoughtText}`);
 
 	lines.push("", "Result:", output, "", "Tool calls by turn:");
@@ -412,15 +414,27 @@ function buildRunStartMessage(runState: CommandRunState, status: "started" | "re
 	};
 }
 
+function formatModelResolutionLine(model: {
+	declaredModel?: string;
+	effectiveModel?: string;
+	modelResolutionReason?: string;
+}): string {
+	if (!model.declaredModel || !model.effectiveModel || model.declaredModel === model.effectiveModel) return "";
+	const reason = model.modelResolutionReason ? ` (${model.modelResolutionReason})` : "";
+	return `Model: ${model.declaredModel} → ${model.effectiveModel}${reason}`;
+}
+
 function buildRunCompletionMessage(finalized: FinalizedRun, options?: { display?: boolean }) {
 	const { runState, result, isError, rawOutput } = finalized;
 	const usage = result ? formatUsageStats(result.usage, result.model) : "";
+	const modelResolution = formatModelResolutionLine(result ?? runState);
 	return {
 		customType: "subagent-tool" as const,
 		content:
 			`[subagent:${runState.agent}#${runState.id}] ${isError ? "failed" : "completed"}` +
 			`\nPrompt: ${truncateLines(runState.task, 2)}` +
 			(usage ? `\nUsage: ${usage}` : "") +
+			(modelResolution ? `\n${modelResolution}` : "") +
 			(runState.thoughtText ? `\nThought: ${runState.thoughtText}` : "") +
 			`\n\n${rawOutput}`,
 		display: options?.display ?? true,
@@ -440,6 +454,9 @@ function buildRunCompletionMessage(finalized: FinalizedRun, options?: { display?
 			exitCode: result?.exitCode,
 			usage: result?.usage,
 			model: result?.model,
+			declaredModel: result?.declaredModel ?? runState.declaredModel,
+			effectiveModel: result?.effectiveModel ?? runState.effectiveModel,
+			modelResolutionReason: result?.modelResolutionReason ?? runState.modelResolutionReason,
 			source: result?.agentSource,
 			thoughtText: runState.thoughtText,
 			status: runState.status,
@@ -455,12 +472,14 @@ function buildRunCompletionMessage(finalized: FinalizedRun, options?: { display?
 
 function buildEscalationMessage(runState: CommandRunState, escalationMessage: string, result: SingleResult) {
 	const usage = formatUsageStats(result.usage, result.model);
+	const modelResolution = formatModelResolutionLine(result);
 	return {
 		customType: "subagent-tool" as const,
 		content:
 			`[subagent:${runState.agent}#${runState.id}] escalated` +
 			`\nPrompt: ${truncateLines(runState.task, 2)}` +
 			(usage ? `\nUsage: ${usage}` : "") +
+			(modelResolution ? `\n${modelResolution}` : "") +
 			`\n\n[ESCALATION] ${escalationMessage}`,
 		display: true,
 		details: {
@@ -476,6 +495,9 @@ function buildEscalationMessage(runState: CommandRunState, escalationMessage: st
 			exitCode: result.exitCode,
 			usage: result.usage,
 			model: result.model,
+			declaredModel: result.declaredModel,
+			effectiveModel: result.effectiveModel,
+			modelResolutionReason: result.modelResolutionReason,
 			batchId: runState.batchId,
 			pipelineId: runState.pipelineId,
 			pipelineStepIndex: runState.pipelineStepIndex,
@@ -563,7 +585,18 @@ function toLaunchSummary(
 function buildRunAnalyticsSummary(
 	runState: Pick<
 		CommandRunState,
-		"id" | "agent" | "status" | "elapsedMs" | "model" | "batchId" | "pipelineId" | "pipelineStepIndex" | "runtime"
+		| "id"
+		| "agent"
+		| "status"
+		| "elapsedMs"
+		| "model"
+		| "declaredModel"
+		| "effectiveModel"
+		| "modelResolutionReason"
+		| "batchId"
+		| "pipelineId"
+		| "pipelineStepIndex"
+		| "runtime"
 	>,
 ): Record<string, unknown> {
 	return {
@@ -572,6 +605,9 @@ function buildRunAnalyticsSummary(
 		status: runState.status,
 		elapsedMs: runState.elapsedMs,
 		model: runState.model,
+		declaredModel: runState.declaredModel,
+		effectiveModel: runState.effectiveModel,
+		modelResolutionReason: runState.modelResolutionReason,
 		batchId: runState.batchId,
 		pipelineId: runState.pipelineId,
 		stepIndex: runState.pipelineStepIndex,
@@ -1070,6 +1106,9 @@ export function createSubagentToolExecute(pi: ExtensionAPI, store: SubagentStore
 				runState.lastOutput = "";
 				runState.usage = undefined;
 				runState.model = undefined;
+				runState.declaredModel = undefined;
+				runState.effectiveModel = undefined;
+				runState.modelResolutionReason = undefined;
 				runState.removed = false;
 				runState.turnCount = Math.max(DEFAULT_TURN_COUNT, runState.turnCount || DEFAULT_TURN_COUNT) + 1;
 				runState.contextMode = runState.contextMode ?? (config.inheritMainContext ? "main" : "sub");

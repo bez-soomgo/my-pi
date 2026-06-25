@@ -63,6 +63,9 @@ interface SubagentEndEntry extends BaseLogEntry {
 	status: "done" | "error";
 	elapsedMs?: number;
 	model?: string;
+	declaredModel?: string;
+	effectiveModel?: string;
+	modelResolutionReason?: string;
 }
 
 interface SkillReadEntry extends BaseLogEntry {
@@ -187,6 +190,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function extractModelResolutionFields(
+	value: Record<string, unknown>,
+): Pick<SubagentEndEntry, "declaredModel" | "effectiveModel" | "modelResolutionReason"> {
+	return {
+		declaredModel: typeof value.declaredModel === "string" ? value.declaredModel : undefined,
+		effectiveModel: typeof value.effectiveModel === "string" ? value.effectiveModel : undefined,
+		modelResolutionReason: typeof value.modelResolutionReason === "string" ? value.modelResolutionReason : undefined,
+	};
+}
+
 function extractSubagentEndEntriesFromCustomMessage(customMessage: {
 	content?: unknown;
 	details?: unknown;
@@ -203,6 +216,7 @@ function extractSubagentEndEntriesFromCustomMessage(customMessage: {
 	const status: "done" | "error" = isError ? "error" : "done";
 	const elapsedMs = typeof d.elapsedMs === "number" ? d.elapsedMs : undefined;
 	const model = typeof d.model === "string" ? d.model : undefined;
+	const modelResolutionFields = extractModelResolutionFields(d);
 
 	if (typeof d.runId === "number") {
 		return [
@@ -215,6 +229,7 @@ function extractSubagentEndEntriesFromCustomMessage(customMessage: {
 				status,
 				elapsedMs,
 				model,
+				...modelResolutionFields,
 			},
 		];
 	}
@@ -223,7 +238,7 @@ function extractSubagentEndEntriesFromCustomMessage(customMessage: {
 	if (runSummaries.length === 0) return [];
 
 	return runSummaries.flatMap((summary) => {
-		if (!summary || typeof summary !== "object") return [];
+		if (!isRecord(summary)) return [];
 		return [
 			{
 				agent: typeof summary.agent === "string" ? summary.agent : "unknown",
@@ -234,6 +249,7 @@ function extractSubagentEndEntriesFromCustomMessage(customMessage: {
 				status: typeof summary.status === "string" && summary.status.toLowerCase() === "error" ? "error" : "done",
 				elapsedMs: typeof summary.elapsedMs === "number" ? summary.elapsedMs : undefined,
 				model: typeof summary.model === "string" ? summary.model : undefined,
+				...extractModelResolutionFields(summary),
 			},
 		];
 	});

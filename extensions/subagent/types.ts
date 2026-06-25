@@ -28,6 +28,9 @@ export interface SingleResult {
 	stderr: string;
 	usage: UsageStats;
 	model?: string;
+	declaredModel?: string;
+	effectiveModel?: string;
+	modelResolutionReason?: string;
 	stopReason?: string;
 	errorMessage?: string;
 	step?: number;
@@ -82,6 +85,9 @@ export interface CommandRunState {
 	abortController?: AbortController;
 	usage?: UsageStats;
 	model?: string;
+	declaredModel?: string;
+	effectiveModel?: string;
+	modelResolutionReason?: string;
 	removed?: boolean;
 	contextMode?: "main" | "sub";
 	thoughtText?: string;

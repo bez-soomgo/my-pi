@@ -118,6 +118,9 @@ export function updateRunFromResult(state: CommandRunState, result: SingleResult
 	state.toolCalls = Math.max(collectToolCallCount(result.messages), result.liveToolCalls ?? 0);
 	state.usage = result.usage;
 	state.model = result.model ?? state.model;
+	state.declaredModel = result.declaredModel ?? state.declaredModel;
+	state.effectiveModel = result.effectiveModel ?? result.model ?? state.effectiveModel;
+	state.modelResolutionReason = result.modelResolutionReason ?? state.modelResolutionReason;
 	if (result.usage?.turns != null) state.turnCount = result.usage.turns;
 	if (result.thoughtText) state.thoughtText = result.thoughtText;
 
