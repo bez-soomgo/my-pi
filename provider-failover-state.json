@@ -1,0 +1,42 @@
+{
+	"stateVersion": 5,
+	"lastProbeAtByProvider": {
+		"openai-codex": 1782349632950
+	},
+	"exhaustedUntilByProvider": {
+		"openai-codex": 1782361067000
+	},
+	"exhaustedUntilByModel": {},
+	"invalidatedByProvider": {},
+	"usageByProvider": {
+		"openai-codex": {
+			"provider": "openai-codex",
+			"family": "codex",
+			"fetchedAt": 1782350298974,
+			"credentialHash": "f16a0e699509",
+			"plan": "team",
+			"primary": {
+				"usedPercent": 100,
+				"resetAt": 1782361067000,
+				"windowSeconds": 18000
+			},
+			"secondary": {
+				"usedPercent": 35,
+				"resetAt": 1782699758000,
+				"windowSeconds": 604800
+			},
+			"credits": {
+				"hasCredits": false,
+				"unlimited": false
+			}
+		}
+	},
+	"lastSwitches": [
+		{
+			"from": "anthropic/claude-sonnet-4-6",
+			"to": "openai-codex/gpt-5.5",
+			"reason": "startup preflight: selected account unavailable",
+			"at": 1782349632950
+		}
+	]
+}
