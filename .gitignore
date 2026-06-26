@@ -10,6 +10,7 @@ sessions/
 
 # Local data
 .data/
+/data/soomgo-force/
 
 # Generated / logs
 daily-analysis/
@@ -57,6 +58,7 @@ npm/
 # Extension-specific ignores
 extensions/.context/
 extensions/.gw/
+/extensions/soomgo-force
 extensions/pi-session-*.html
 /cron/
 
