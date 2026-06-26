@@ -1,51 +1,59 @@
 {
-  "autocompleteMaxVisible": 3,
-  "collapseChangelog": true,
-  "compaction": {
-    "enabled": true
-  },
-  "defaultModel": "gpt-5.5",
-  "defaultProvider": "openai-codex",
-  "defaultThinkingLevel": "high",
-  "doubleEscapeAction": "tree",
-  "enabledModels": [
-    "openai-codex/gpt-5.5",
-    "anthropic/claude-fable-5",
-    "anthropic/claude-opus-4-6"
-  ],
-  "hideThinkingBlock": false,
-  "images": {
-    "blockImages": false
-  },
-  "lastChangelogVersion": "0.79.1",
-  "packages": [
-    "npm:@ryan_nookpi/pi-extension-codex-fast-mode",
-    "npm:@ryan_nookpi/pi-extension-clipboard",
-    "npm:@ryan_nookpi/pi-extension-ask-user-question",
-    "npm:@ryan_nookpi/pi-extension-auto-name",
-    "npm:@ryan_nookpi/pi-extension-delayed-action",
-    "npm:@ryan_nookpi/pi-extension-idle-screensaver",
-    "npm:@ryan_nookpi/pi-extension-open-pr",
-    "npm:@ryan_nookpi/pi-extension-generative-ui",
-    "npm:@ryan_nookpi/pi-extension-cross-agent",
-    "npm:@ryan_nookpi/pi-extension-claude-hooks-bridge",
-    "npm:@ryan_nookpi/pi-extension-claude-mcp-bridge",
-    "npm:@ryan_nookpi/pi-extension-memory-layer",
-    "npm:@ryan_nookpi/pi-extension-claude-spinner",
-    "npm:@ryan_nookpi/pi-extension-cc-system-prompt",
-    "npm:@ryan_nookpi/pi-extension-todo-write-overlay",
-    "git:github.com/injaneity/pi-computer-use@v0.2.5",
-    "npm:@ryan_nookpi/pi-extension-diff-review"
-  ],
-  "quietStartup": true,
-  "subagent": {
-    "claudeRuntime": "cli"
-  },
-  "terminal": {
-    "showImages": false
-  },
-  "theme": "nord",
-  "warnings": {
-    "anthropicExtraUsage": false
-  }
+	"autocompleteMaxVisible": 3,
+	"collapseChangelog": true,
+	"compaction": {
+		"enabled": true
+	},
+	"defaultModel": "gpt-5.5",
+	"defaultProvider": "github-copilot",
+	"defaultThinkingLevel": "high",
+	"doubleEscapeAction": "tree",
+	"enabledModels": [
+		"openai-codex/gpt-5.5",
+		"anthropic/claude-sonnet-4-6",
+		"anthropic/claude-opus-4-6",
+		"anthropic/claude-opus-4-8",
+		"anthropic/claude-fable-5"
+	],
+	"hideThinkingBlock": false,
+	"images": {
+		"blockImages": false
+	},
+	"lastChangelogVersion": "0.80.2",
+	"retry": {
+		"provider": {
+			"maxRetries": 0
+		}
+	},
+	"packages": [
+		"npm:@ryan_nookpi/pi-extension-codex-fast-mode",
+		"npm:@ryan_nookpi/pi-extension-clipboard",
+		"npm:@ryan_nookpi/pi-extension-ask-user-question",
+		"npm:@ryan_nookpi/pi-extension-auto-name",
+		"npm:@ryan_nookpi/pi-extension-delayed-action",
+		"npm:@ryan_nookpi/pi-extension-idle-screensaver",
+		"npm:@ryan_nookpi/pi-extension-open-pr",
+		"npm:@ryan_nookpi/pi-extension-generative-ui",
+		"npm:@ryan_nookpi/pi-extension-cross-agent",
+		"npm:@ryan_nookpi/pi-extension-claude-hooks-bridge",
+		"npm:@ryan_nookpi/pi-extension-claude-mcp-bridge",
+		"npm:@ryan_nookpi/pi-extension-memory-layer",
+		"npm:@ryan_nookpi/pi-extension-claude-spinner",
+		"npm:@ryan_nookpi/pi-extension-cc-system-prompt",
+		"npm:@ryan_nookpi/pi-extension-todo-write-overlay",
+		"git:github.com/injaneity/pi-computer-use@v0.2.5",
+		"npm:@ryan_nookpi/pi-extension-diff-review",
+		"npm:@pi-stef/atlassian"
+	],
+	"quietStartup": true,
+	"subagent": {
+		"claudeRuntime": "cli"
+	},
+	"terminal": {
+		"showImages": false
+	},
+	"theme": "nord",
+	"warnings": {
+		"anthropicExtraUsage": false
+	}
 }

@@ -1,3 +1,5 @@
+import { existsSync, realpathSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Container, Spacer, Text, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { truncatePlainToWidth } from "../utils/format-utils.js";
@@ -5,7 +7,31 @@ import { truncatePlainToWidth } from "../utils/format-utils.js";
 const PATCH_STATE_KEY = Symbol.for("creatrip.tool-group-renderer.patch-state");
 const PATCH_VERSION = "2026-04-27-r1";
 const GROUP_STATE = Symbol("creatrip.tool-group-renderer.state");
-const PI_INTERACTIVE_BASE = "/usr/local/lib/node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive";
+// This extension monkey-patches the InteractiveMode class of the *running* pi
+// process, so it must load that exact module — the globally-installed pi that
+// launched this TUI, not the local pnpm copy under extensions/node_modules
+// (a separate module instance whose prototype patch would never take effect).
+// process.argv[1] is pi's entry script (…/dist/cli.js); realpath it so a bin
+// symlink (nvm, /usr/local, …) resolves to the real install location.
+function resolvePiInteractiveBase(): string {
+	const entry = process.argv[1];
+	if (entry) {
+		let resolved = entry;
+		try {
+			resolved = realpathSync(entry);
+		} catch {
+			// keep the unresolved path
+		}
+		const base = join(dirname(resolved), "modes/interactive");
+		if (existsSync(join(base, "interactive-mode.js"))) {
+			return base;
+		}
+	}
+	// Fallback: the original author's system-wide install location.
+	return "/usr/local/lib/node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive";
+}
+
+const PI_INTERACTIVE_BASE = resolvePiInteractiveBase();
 const BASH_PREVIEW_LIMIT = 56;
 const MIN_BASH_LINE_WIDTH_WITH_COMMAND = 36;
 const MIN_BASH_COMMAND_PREVIEW_WIDTH = 12;

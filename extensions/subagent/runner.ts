@@ -23,6 +23,7 @@ import {
 	stateToSingleResult,
 } from "./claude-stream-parser.js";
 import { resolveClaudeRuntimeMode } from "./config.js";
+import { resolvePreflightFailoverModel } from "./failover-model.js";
 import { formatToolCallPlain } from "./format.js";
 import {
 	extractActivityPreviewFromTextDelta,
@@ -547,9 +548,11 @@ async function runPiAgent(
 	persistedSessionBaseOffset = 0,
 ): Promise<SingleResult> {
 	const args: string[] = ["--mode", "json", "-p"];
+	const modelResolution = resolvePreflightFailoverModel(agent.model);
+	const effectiveModel = modelResolution.effectiveModel ?? agent.model;
 	if (sessionFile) args.push("--session", sessionFile);
 	else args.push("--no-session");
-	if (agent.model) args.push("--model", agent.model);
+	if (effectiveModel) args.push("--model", effectiveModel);
 	if (agent.thinking) args.push("--thinking", agent.thinking);
 	if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
 
@@ -564,7 +567,10 @@ async function runPiAgent(
 		messages: [],
 		stderr: "",
 		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
-		model: agent.model,
+		model: effectiveModel,
+		declaredModel: modelResolution.declaredModel,
+		effectiveModel,
+		modelResolutionReason: modelResolution.modelResolutionReason,
 		step,
 		sessionFile,
 	};
