@@ -18,6 +18,8 @@ type ResolveOptions = {
 	agentDir?: string;
 	configPath?: string;
 	statePath?: string;
+	/** Override path to ~/.claude/.credentials.json for testing. */
+	claudeCredPath?: string;
 };
 
 type CopilotFailoverConfig = {
@@ -74,6 +76,40 @@ function formatCooldownReason(provider: string, until: number | undefined): stri
 	return `${provider} is cooled down until ${new Date(until).toISOString()}`;
 }
 
+const AUTH_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+
+function toMs(value: number): number {
+	return value > 1_000_000_000_000 ? value : value * 1000;
+}
+
+function readAnthropicExpiresAt(agentDir: string, claudeCredPath?: string): number | undefined {
+	const piAuth = readJsonFile<Record<string, any>>(path.join(agentDir, "auth.json"));
+	const piExpires = piAuth?.anthropic?.expires ?? piAuth?.anthropic?.expiresAt;
+	if (typeof piExpires === "number" && Number.isFinite(piExpires)) {
+		return toMs(piExpires);
+	}
+	const credPath = claudeCredPath ?? path.join(os.homedir(), ".claude", ".credentials.json");
+	const cred = readJsonFile<any>(credPath);
+	const nested = isRecord(cred?.claudeAiOauth) ? cred.claudeAiOauth : cred;
+	const credExpires = nested?.expiresAt ?? nested?.expires;
+	if (typeof credExpires === "number" && Number.isFinite(credExpires)) {
+		return toMs(credExpires);
+	}
+	return undefined;
+}
+
+function isProviderAuthExpired(
+	provider: string,
+	agentDir: string,
+	now: number,
+	claudeCredPath?: string,
+): boolean {
+	if (provider !== "anthropic") return false;
+	const expiresAt = readAnthropicExpiresAt(agentDir, claudeCredPath);
+	if (expiresAt === undefined) return false;
+	return expiresAt < now + AUTH_EXPIRY_BUFFER_MS;
+}
+
 function getFallbacks(config: CopilotFailoverConfig | undefined, declaredModel: string): string[] {
 	const fallbacks = config?.fallbacks;
 	if (!isRecord(fallbacks)) return [];
@@ -102,19 +138,26 @@ export function resolvePreflightFailoverModel(
 	if (!source) return { declaredModel: declared, effectiveModel: declared };
 
 	const state = readJsonFile<CopilotFailoverState>(statePath);
-	if (!isProviderCooled(state, source.provider, now)) {
+	const cooled = isProviderCooled(state, source.provider, now);
+	const authExpired = isProviderAuthExpired(source.provider, agentDir, now, options.claudeCredPath);
+
+	if (!cooled && !authExpired) {
 		return { declaredModel: declared, effectiveModel: declared };
 	}
 
-	const sourceCooldownUntil = getProviderCooldownUntil(state, source.provider);
+	const reason = authExpired
+		? `${source.provider} auth token is expired or expiring soon`
+		: formatCooldownReason(source.provider, getProviderCooldownUntil(state, source.provider));
+
 	for (const candidate of getFallbacks(config, declared)) {
 		const target = parseModelRef(candidate);
 		if (!target) continue;
 		if (isProviderCooled(state, target.provider, now)) continue;
+		if (isProviderAuthExpired(target.provider, agentDir, now, options.claudeCredPath)) continue;
 		return {
 			declaredModel: declared,
 			effectiveModel: candidate,
-			modelResolutionReason: `copilot-failover preflight: ${formatCooldownReason(source.provider, sourceCooldownUntil)}`,
+			modelResolutionReason: `copilot-failover preflight: ${reason}`,
 		};
 	}
 
