@@ -72,4 +72,99 @@ describe("resolvePreflightFailoverModel", () => {
 			"anthropic/claude-sonnet-4-6",
 		);
 	});
+
+	describe("auth expiry", () => {
+		it("routes to fallback when anthropic token is expired (pi auth.json)", () => {
+			const agentDir = makeAgentDir();
+			writeJson(path.join(agentDir, "copilot-failover.json"), {
+				enabled: true,
+				fallbacks: { "anthropic/claude-opus-4-8": ["github-copilot/claude-opus-4.8"] },
+			});
+			writeJson(path.join(agentDir, "state", "copilot-failover-state.json"), { cooldowns: {} });
+			writeJson(path.join(agentDir, "auth.json"), {
+				anthropics: { access: "tok", expires: 900 }, // ms: 900000 in the past
+				anthropic: { access: "tok", expires: 900 }, // epoch seconds — converts to 900000ms
+			});
+
+			const result = resolvePreflightFailoverModel("anthropic/claude-opus-4-8", {
+				agentDir,
+				now: 1_000_000,
+				claudeCredPath: path.join(agentDir, "nonexistent-cred.json"),
+			});
+			expect(result.effectiveModel).toBe("github-copilot/claude-opus-4.8");
+			expect(result.modelResolutionReason).toMatch(/auth token is expired/);
+		});
+
+		it("routes to fallback when anthropic token is expired (claude credentials.json)", () => {
+			const agentDir = makeAgentDir();
+			const claudeCredPath = path.join(agentDir, "claude-cred.json");
+			writeJson(path.join(agentDir, "copilot-failover.json"), {
+				enabled: true,
+				fallbacks: { "anthropic/claude-sonnet-4-6": ["github-copilot/claude-sonnet-4.6"] },
+			});
+			writeJson(path.join(agentDir, "state", "copilot-failover-state.json"), { cooldowns: {} });
+			writeJson(claudeCredPath, { claudeAiOauth: { expiresAt: 500 } });
+
+			const result = resolvePreflightFailoverModel("anthropic/claude-sonnet-4-6", {
+				agentDir,
+				now: 1_000_000,
+				claudeCredPath,
+			});
+			expect(result.effectiveModel).toBe("github-copilot/claude-sonnet-4.6");
+			expect(result.modelResolutionReason).toMatch(/auth token is expired/);
+		});
+
+		it("keeps declared model when token has not yet expired", () => {
+			const agentDir = makeAgentDir();
+			const claudeCredPath = path.join(agentDir, "claude-cred.json");
+			writeJson(path.join(agentDir, "copilot-failover.json"), {
+				enabled: true,
+				fallbacks: { "anthropic/claude-sonnet-4-6": ["github-copilot/claude-sonnet-4.6"] },
+			});
+			writeJson(path.join(agentDir, "state", "copilot-failover-state.json"), { cooldowns: {} });
+			writeJson(claudeCredPath, { expiresAt: 10_000_000_000 });
+
+			const result = resolvePreflightFailoverModel("anthropic/claude-sonnet-4-6", {
+				agentDir,
+				now: 1_000_000,
+				claudeCredPath,
+			});
+			expect(result.effectiveModel).toBe("anthropic/claude-sonnet-4-6");
+		});
+
+		it("keeps declared model when no auth file is found", () => {
+			const agentDir = makeAgentDir();
+			writeJson(path.join(agentDir, "copilot-failover.json"), {
+				enabled: true,
+				fallbacks: { "anthropic/claude-opus-4-8": ["github-copilot/claude-opus-4.8"] },
+			});
+			writeJson(path.join(agentDir, "state", "copilot-failover-state.json"), { cooldowns: {} });
+
+			const result = resolvePreflightFailoverModel("anthropic/claude-opus-4-8", {
+				agentDir,
+				now: 1_000_000,
+				claudeCredPath: path.join(agentDir, "nonexistent.json"),
+			});
+			expect(result.effectiveModel).toBe("anthropic/claude-opus-4-8");
+		});
+
+		it("skips expired fallback and keeps declared model when all candidates are expired", () => {
+			const agentDir = makeAgentDir();
+			const claudeCredPath = path.join(agentDir, "claude-cred.json");
+			writeJson(path.join(agentDir, "copilot-failover.json"), {
+				enabled: true,
+				// only fallback is also anthropic — both expired
+				fallbacks: { "anthropic/claude-opus-4-8": ["anthropic/claude-sonnet-4-6"] },
+			});
+			writeJson(path.join(agentDir, "state", "copilot-failover-state.json"), { cooldowns: {} });
+			writeJson(claudeCredPath, { expiresAt: 500 });
+
+			const result = resolvePreflightFailoverModel("anthropic/claude-opus-4-8", {
+				agentDir,
+				now: 1_000_000,
+				claudeCredPath,
+			});
+			expect(result.effectiveModel).toBe("anthropic/claude-opus-4-8");
+		});
+	});
 });
